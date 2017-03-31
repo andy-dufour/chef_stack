@@ -17,35 +17,103 @@
 # limitations under the License.
 # rubocop:disable Lint/ParenthesesAsGroupedExpression
 
-resource_name 'chef_package'
+resource_name :chef_package
 
 default_action :install
 
-property :package_name, name_property: true
-property :platform, default: node['platform']
-property :platform_arch, default: node['architecture']
-property :use_configured_repo, default: false
-property :config, default: Mash.new
+property :product_name, String, name_property: true
+property :match_checksum, [TrueClass, FalseClass], default: false
+property :file_name, String
+property :platform, String, default: node['platform']
+property :platform_version, String, default: node['platform_version']
+property :platform_arch, String, default: node['kernel']['machine']
+property :package_channel, Symbol, default: 'stable'.to_sym
+property :package_version, String, default: 'latest'
+property :use_configured_repo, [TrueClass, FalseClass], default: false
+property :package_name, String
+property :use_configured_file, [TrueClass, FalseClass], default: false
+property :file_source, String
+property :accept_license, kind_of: [TrueClass, FalseClass], default: false
+property :config, kind_of: [String, NilClass]
+
+action_class do
+  include ChefStackCookbook::Helpers
+end
 
 action :install do
-  package_info = ChefStack::PackageInfo.new(
-                                            new_resource.package_name,
-                                            new_resource.platform,
-                                            new_resource.platform_arch
-                                          )
-  if use_configured_repo
-    package new_resource.package_name
+  ensure_mixlib_install_gem_installed!
+  if new_resource.use_configured_repo
+    package new_resource.package_name do
+      notifies :reconfigure, "chef_package[#{new_resource.product_name}]", :immediately
+    end
+  elsif new_resource.use_configured_file
+    chef_file new_resource.file_name do
+      source new_resource.file_source
+    end
+    package new_resource.product_name do
+      source new_resource.file_name
+      notifies :reconfigure, "chef_package[#{new_resource.product_name}]", :immediately
+    end
   else
-    remote_file package_info.file_name do
-      source package_info.url
-      checksum package_info.checksum
+    artifact_options = {
+                          product_name: new_resource.product_name,
+                          channel: new_resource.package_channel,
+                          product_version: new_resource.package_version,
+                          platform: new_resource.platform,
+                          platform_version: new_resource.platform_version,
+                          architecture: new_resource.platform_arch
+                        }
+
+    artifact = Mixlib::Install.new(artifact_options).artifact_info
+    cache_path = Chef::Config[:file_cache_path]
+    local_artifact_path = ::File.join(cache_path, ::File.basename(artifact.url))
+
+    remote_file local_artifact_path do
+      source artifact.url
+      checksum artifact.sha256
+    end
+    package local_artifact_path do
+      provider Chef::Provider::Package::Rpm if node['platform'] == 'suse'
+      notifies :reconfigure, "chef_package[#{new_resource.product_name}]", :immediately
     end
   end
+end
 
-  template package_info.config_path do
-    source 'config.rb.erb'
-    variables({
-      :config => new_resource.config
-    })
+action :reconfigure do
+  if ctl_cmd(new_resource.product_name).nil?
+    Chef::Log.warn "Product '#{new_resource.product_name}' does not support reconfigure."
+    Chef::Log.warn 'chef_ingredient is skipping :reconfigure.'
+  else
+    # Render the config in case it is not rendered yet
+    chef_package_config new_resource.product_name do
+      action :render
+      config new_resource.config
+      only_if { new_resource.config }
+    end
+
+    # If accept_license is set, drop .license.accepted file so that
+    # reconfigure does not prompt for license acceptance. This is
+    # the backwards compatible way of accepting a Chef license.
+    if new_resource.accept_license && %w(analytics manage reporting compliance).include?(new_resource.product_name)
+      # The way we construct the data directory for a product, that looks
+      # like /var/opt/<product_name> is to get the config file path that
+      # looks like /etc/<product_name>/<product_name>.rb and do path
+      # manipulation.
+      product_data_dir_name = ::File.basename(::File.dirname(config_file(new_resource.product_name)))
+      product_data_dir = ::File.join('/var/opt', product_data_dir_name)
+
+      directory product_data_dir do
+        recursive true
+        action :create
+      end
+
+      file ::File.join(product_data_dir, '.license.accepted') do
+        action :touch
+      end
+    end
+
+    execute "#{new_resource.product_name}-reconfigure" do
+      command "#{ctl_cmd(new_resource.product_name)} reconfigure"
+    end
   end
 end
