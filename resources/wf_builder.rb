@@ -44,9 +44,13 @@ load_current_value do
   # current_value_does_not_exist! unless node.run_state['chef-users'].index(/^#{username}$/)
 end
 
+action_class do
+  include ChefStackCookbook::Helpers
+end
+
 action :create do
-  chef_ingredient 'chefdk' do
-    action :upgrade
+  chef_package 'chefdk' do
+    action :install
     channel new_resource.channel
     version new_resource.version
     accept_license new_resource.accept_license
@@ -160,7 +164,7 @@ action :create do
   case new_resource.job_dispatch_version
   when 'v1'
     execute 'tag node as legacy build-node' do
-      command "knife tag create #{Chef::Config['node_name']} delivery-build-node -c new_resource.chef_config_path"
+      command "knife tag create #{Chef::Config['node_name']} delivery-build-node -c #{new_resource.chef_config_path}"
       not_if { node['tags'].include?('delivery-build-node') }
     end
 
@@ -168,8 +172,10 @@ action :create do
       recursive true
     end
 
-    chef_ingredient 'push-jobs-client' do
+    chef_package 'push-jobs-client' do
       version new_resource.pj_version
+      platform new_resource.platform if new_resource.platform
+      platform_version new_resource.platform_version if new_resource.platform_version
     end
 
     template '/etc/chef/push-jobs-client.rb' do

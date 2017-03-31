@@ -38,8 +38,11 @@ property :interval, Integer, default: 1800
 property :splay, Integer, default: 1800
 property :data_collector_token, String, default: '93a49a4f2482c64126f7b6015e6b0f30284287ee4054ff8807fb63d9cbd1c506'
 property :data_collector_url, String
-property :platform, String
-property :platform_version, String
+property :platform, String, default: node['platform']
+property :platform_version, String, default: node['platform_version']
+property :platform_arch, String, default: node['kernel']['machine']
+property :package_channel, Symbol, default: 'stable'.to_sym
+property :package_version, String, default: 'latest'
 
 load_current_value do
   version Chef::VERSION
@@ -58,16 +61,16 @@ load_current_value do
 end
 
 action :install do
-  chef_ingredient 'chef' do
-    action :upgrade
+  chef_package 'chef' do
+    action :install
     version new_resource.version
     not_if { new_resource.chefdk }
     platform new_resource.platform if new_resource.platform
     platform_version new_resource.platform_version if new_resource.platform_version
   end
 
-  chef_ingredient 'chefdk' do
-    action :upgrade
+  chef_package 'chefdk' do
+    action :install
     version new_resource.version
     only_if { new_resource.chefdk }
     platform new_resource.platform if new_resource.platform

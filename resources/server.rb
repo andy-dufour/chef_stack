@@ -41,8 +41,8 @@ action :create do
     new_resource.config << "\ndata_collector['root_url'] = '#{new_resource.data_collector_url}'"
     new_resource.config << "\ndata_collector['token'] = '#{new_resource.data_collector_token}'"
   end
-  chef_ingredient 'chef-server' do
-    action :upgrade
+  chef_package 'chef-server' do
+    action :install
     channel new_resource.channel
     version new_resource.version
     config new_resource.config
@@ -51,23 +51,15 @@ action :create do
     platform_version new_resource.platform_version if new_resource.platform_version
   end
 
-  ingredient_config 'chef-server' do
-    notifies :reconfigure, 'chef_ingredient[chef-server]', :immediately
-  end
-
   addons.each do |addon, options|
-    chef_ingredient addon do
-      action :upgrade
+    chef_package addon do
+      action :install
       channel options['channel'] || :stable
       version options['version'] || :latest
       config options['config'] || ''
       accept_license new_resource.accept_license
       platform new_resource.platform if new_resource.platform
       platform_version new_resource.platform_version if new_resource.platform_version
-    end
-
-    ingredient_config addon do
-      notifies :reconfigure, "chef_ingredient[#{addon}]", :immediately
     end
   end
 end

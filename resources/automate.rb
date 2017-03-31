@@ -51,16 +51,6 @@ action :create do
   # Hardcode v1 runner search to automate-build-node
   new_resource.config << "\ndelivery['default_search'] = 'tags:delivery-build-node'"
 
-  chef_ingredient 'automate' do
-    action :upgrade
-    channel new_resource.channel
-    version new_resource.version
-    config new_resource.config
-    accept_license new_resource.accept_license
-    platform new_resource.platform if new_resource.platform
-    platform_version new_resource.platform_version if new_resource.platform_version
-  end
-
   directory '/etc/delivery'
   directory '/etc/chef'
 
@@ -101,8 +91,14 @@ action :create do
       EOF
   end
 
-  ingredient_config 'automate' do
-    notifies :reconfigure, 'chef_ingredient[automate]', :immediately
+  chef_package 'automate' do
+    action :install
+    channel new_resource.channel
+    version new_resource.version
+    config new_resource.config
+    accept_license new_resource.accept_license
+    platform new_resource.platform if new_resource.platform
+    platform_version new_resource.platform_version if new_resource.platform_version
   end
 
   if new_resource.enterprise.is_a?(String)
