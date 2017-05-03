@@ -213,12 +213,13 @@ action :create do
       command "knife tag create #{Chef::Config['node_name']} delivery-job-runner -c #{new_resource.chef_config_path}"
       not_if { node['tags'].include?('delivery-job-runner') }
     end
-
+    group build_user
     user build_user do
       action [:create, :lock]
+      group build_user
       home home_dir
     end
-
+    
     directory home_dir do
       owner build_user
       group build_user
