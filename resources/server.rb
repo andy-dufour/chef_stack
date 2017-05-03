@@ -51,15 +51,17 @@ action :create do
     platform_version new_resource.platform_version if new_resource.platform_version
   end
 
-  addons.each do |addon, options|
-    chef_package addon do
-      action :install
-      channel options['channel'] || :stable
-      version options['version'] || :latest
-      config options['config'] || ''
-      accept_license new_resource.accept_license
-      platform new_resource.platform if new_resource.platform
-      platform_version new_resource.platform_version if new_resource.platform_version
+  if addons
+    addons.each do |addon, options|
+      chef_package addon do
+        action :install
+        channel options['channel'] || :stable
+        version options['version'] || :latest
+        config options['config'] || ''
+        accept_license new_resource.accept_license
+        platform options['platform'] if options['platform']
+        platform_version options['platform_version'] if options['platform_version']
+      end
     end
   end
 end
