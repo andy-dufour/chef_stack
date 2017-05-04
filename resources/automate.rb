@@ -58,6 +58,12 @@ action :create do
     recursive true
   end
 
+  group 'delivery'
+  
+  user 'delivery' do
+    group 'delivery'
+  end
+
   {
     '/var/opt/delivery/license/delivery.license' => new_resource.license,
     "/etc/delivery/#{new_resource.chef_user}.pem" => new_resource.chef_user_pem,
