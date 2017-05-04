@@ -219,7 +219,7 @@ action :create do
       group build_user
       home home_dir
     end
-    
+
     directory home_dir do
       owner build_user
       group build_user
@@ -258,6 +258,9 @@ action :create do
           -s #{new_resource.automate_fqdn} \
           -e #{new_resource.automate_enterprise} \
           -u #{new_resource.automate_user}").run_command
+          
+        runner.stdout.gsub!("\e[37m", '')
+        runner.stdout.gsub!("\e(B\e[m\n\e(B\e[m", '')
         ::File.write(::File.join(home_dir, '.ssh/authorized_keys'), JSON.parse(runner.stdout)['openssh_public_key'])
       end
       not_if { ::File.read(::File.join(home_dir, '.ssh/authorized_keys')).include?("#{build_user}@#{node['fqdn']}") }
