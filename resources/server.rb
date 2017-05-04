@@ -43,7 +43,7 @@ action :create do
   end
   chef_package 'chef-server' do
     action :install
-    channel new_resource.channel
+    package_channel new_resource.channel
     version new_resource.version
     config new_resource.config
     accept_license new_resource.accept_license

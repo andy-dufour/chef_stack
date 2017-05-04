@@ -66,7 +66,7 @@ action :create do
   }.each do |file, src|
     chef_file file do
       source src
-      user 'root'
+      user 'delivery'
       group 'root'
       mode '0600'
     end
