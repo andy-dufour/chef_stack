@@ -206,8 +206,8 @@ action :create do
       action [:enable, :start]
     end
   when 'v2'
-    build_user = 'job_runner'
-    home_dir = '/home/job_runner'
+    build_user = 'chefrun'
+    home_dir = '/home/chefrun'
 
     execute 'tag node as job-runner' do
       command "knife tag create #{Chef::Config['node_name']} delivery-job-runner -c #{new_resource.chef_config_path}"
@@ -258,7 +258,7 @@ action :create do
           -s #{new_resource.automate_fqdn} \
           -e #{new_resource.automate_enterprise} \
           -u #{new_resource.automate_user}").run_command
-          
+
         runner.stdout.gsub!("\e[37m", '')
         runner.stdout.gsub!("\e(B\e[m\n\e(B\e[m", '')
         ::File.write(::File.join(home_dir, '.ssh/authorized_keys'), JSON.parse(runner.stdout)['openssh_public_key'])
