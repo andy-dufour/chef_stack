@@ -56,6 +56,7 @@ action :create do
     accept_license new_resource.accept_license
     platform new_resource.platform if new_resource.platform
     platform_version new_resource.platform_version if new_resource.platform_version
+    not_if { ::Dir.exist?('/opt/chefdk') }
   end
 
   directory '/etc/chef/trusted_certs' do
