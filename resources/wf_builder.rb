@@ -207,8 +207,8 @@ action :create do
       action [:enable, :start]
     end
   when 'v2'
-    build_user = 'chefrun'
-    home_dir = '/home/chefrun'
+    build_user = 'job_runner'
+    home_dir = '/home/job_runner'
 
     execute 'tag node as job-runner' do
       command "knife tag create #{Chef::Config['node_name']} delivery-job-runner -c #{new_resource.chef_config_path}"
