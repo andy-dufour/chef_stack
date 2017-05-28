@@ -254,14 +254,13 @@ action :create do
           platform_version: node['platform_version']
         }
 
-        runner = Mixlib::ShellOut.new("delivery api post runners \
+        runner = Mixlib::ShellOut.new("delivery api --non-interactive --no-color \
+          post runners \
           -d '#{data.to_json}' \
           -s #{new_resource.automate_fqdn} \
           -e #{new_resource.automate_enterprise} \
           -u #{new_resource.automate_user}").run_command
 
-        runner.stdout.gsub!("\e[37m", '')
-        runner.stdout.gsub!("\e(B\e[m\n\e(B\e[m", '')
         ::File.write(::File.join(home_dir, '.ssh/authorized_keys'), JSON.parse(runner.stdout)['openssh_public_key'])
       end
       not_if { ::File.read(::File.join(home_dir, '.ssh/authorized_keys')).include?("#{build_user}@#{node['fqdn']}") }
